@@ -19,9 +19,15 @@ jobs:
         run: |
           python - <<'PY'
           from tests.test_api_parsing import test_parse_numeric, test_parse_device_info
+          from tests.test_cookie_parsing import (
+              test_cookie_header_from_response,
+              test_cookie_header_from_empty_response,
+          )
 
           test_parse_numeric()
           test_parse_device_info()
+          test_cookie_header_from_response()
+          test_cookie_header_from_empty_response()
           print("parser tests passed")
           PY
 

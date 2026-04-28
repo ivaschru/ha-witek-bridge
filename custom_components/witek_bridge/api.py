@@ -19,6 +19,7 @@ import aiohttp
 from .const import DEFAULT_TIMEOUT
 from .parsing import (
     WiTekBridgeDeviceInfo,
+    cookie_header_from_set_cookie_headers,
     normalize_base_url,
     parse_device_info,
 )
@@ -61,6 +62,7 @@ class WiTekBridgeApi:
         self._username = username
         self._timeout = timeout
         self._authenticated = False
+        self._cookie_header: str | None = None
 
     @property
     def configuration_url(self) -> str:
@@ -71,6 +73,8 @@ class WiTekBridgeApi:
         """Authenticate against the bridge web UI and keep its session cookie."""
         if self._authenticated and not force:
             return
+        if force:
+            self._cookie_header = None
 
         payload = {
             "username": self._username,
@@ -86,6 +90,7 @@ class WiTekBridgeApi:
                 ) as response:
                     response.raise_for_status()
                     data = await response.json(content_type=None)
+                    self._cookie_header = _cookie_header_from_response(response)
         except (aiohttp.ClientError, TimeoutError) as err:
             raise WiTekBridgeConnectionError(f"Unable to connect to {self.host}") from err
         except ValueError as err:
@@ -164,9 +169,15 @@ class WiTekBridgeApi:
     ) -> str:
         """Run an authenticated HTTP request and return the response body."""
         url = urljoin(self._base_url, path)
+        headers = {"Cookie": self._cookie_header} if self._cookie_header else None
         try:
             async with asyncio.timeout(self._timeout):
-                async with self._session.request(method, url, data=data) as response:
+                async with self._session.request(
+                    method,
+                    url,
+                    data=data,
+                    headers=headers,
+                ) as response:
                     response.raise_for_status()
                     return await response.text()
         except (aiohttp.ClientError, TimeoutError) as err:
@@ -179,6 +190,17 @@ def _json_from_text(text: str) -> dict[str, Any]:
     if not isinstance(decoded, dict):
         raise ValueError("JSON response is not an object")
     return decoded
+
+
+def _cookie_header_from_response(response: aiohttp.ClientResponse) -> str | None:
+    """Build a Cookie header from Set-Cookie headers returned by the bridge.
+
+    Home Assistant's shared aiohttp session uses the safe cookie policy, which
+    rejects cookies set by IP-address hosts. These bridges are normally added by
+    IP address, so we keep only the session cookie value ourselves and attach it
+    to follow-up requests.
+    """
+    return cookie_header_from_set_cookie_headers(response.headers.getall("Set-Cookie", []))
 
 
 def _looks_like_login_page(text: str) -> bool:

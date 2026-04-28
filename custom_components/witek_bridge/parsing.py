@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from html import unescape
+from http.cookies import SimpleCookie
 import re
 from typing import Any
 
@@ -88,3 +89,15 @@ def parse_device_info(host: str, html: str) -> WiTekBridgeDeviceInfo:
         mac_address=mac.lower() if mac else None,
         working_mode=working_mode,
     )
+
+
+def cookie_header_from_set_cookie_headers(headers: list[str]) -> str | None:
+    """Build a reusable Cookie header from one or more Set-Cookie headers."""
+    cookie = SimpleCookie()
+    for header in headers:
+        cookie.load(header)
+
+    if not cookie:
+        return None
+
+    return "; ".join(f"{name}={morsel.value}" for name, morsel in cookie.items())
