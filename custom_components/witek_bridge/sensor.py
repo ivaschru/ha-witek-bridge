@@ -35,21 +35,53 @@ class WiTekBridgeSensorDescription(SensorEntityDescription):
     """Describe how one sensor reads its value from coordinator data."""
 
     value_fn: Callable[[WiTekBridgeCoordinator], Any]
+    enabled_default: bool = True
+    precision: int | None = None
 
 
-def _radio_number(key: str) -> Callable[[WiTekBridgeCoordinator], Any]:
+def _round_value(value: Any, precision: int | None) -> Any:
+    """Round noisy numeric values while preserving unavailable values."""
+    if precision is None or value is None:
+        return value
+    rounded = round(float(value), precision)
+    if precision == 0:
+        return int(rounded)
+    return rounded
+
+
+def _radio_number(
+    key: str,
+    *,
+    precision: int | None = None,
+) -> Callable[[WiTekBridgeCoordinator], Any]:
     """Read and numeric-normalize a primary radio field."""
-    return lambda coordinator: parse_numeric(coordinator.radio.get(key))
+    return lambda coordinator: _round_value(parse_numeric(coordinator.radio.get(key)), precision)
 
 
-def _sysinfo_number(key: str) -> Callable[[WiTekBridgeCoordinator], Any]:
+def _sysinfo_number(
+    key: str,
+    *,
+    precision: int | None = None,
+) -> Callable[[WiTekBridgeCoordinator], Any]:
     """Read and numeric-normalize a system field."""
-    return lambda coordinator: parse_numeric(coordinator.sysinfo.get(key))
+    return lambda coordinator: _round_value(parse_numeric(coordinator.sysinfo.get(key)), precision)
 
 
-def _payload_number(key: str) -> Callable[[WiTekBridgeCoordinator], Any]:
+def _payload_number(
+    key: str,
+    *,
+    precision: int | None = None,
+) -> Callable[[WiTekBridgeCoordinator], Any]:
     """Read and numeric-normalize a top-level status field."""
-    return lambda coordinator: parse_numeric(coordinator.data.get(key))
+    return lambda coordinator: _round_value(parse_numeric(coordinator.data.get(key)), precision)
+
+
+def _uptime_days(coordinator: WiTekBridgeCoordinator) -> float | None:
+    """Return bridge uptime converted from vendor seconds to days."""
+    seconds = parse_numeric(coordinator.sysinfo.get("uptime"))
+    if seconds is None:
+        return None
+    return _round_value(float(seconds) / 86400, 1)
 
 
 SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
@@ -60,7 +92,8 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_radio_number("signal"),
+        precision=0,
+        value_fn=_radio_number("signal", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="noise",
@@ -69,7 +102,9 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_radio_number("noise"),
+        enabled_default=False,
+        precision=0,
+        value_fn=_radio_number("noise", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="quality",
@@ -77,7 +112,8 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_radio_number("quality_perentage"),
+        precision=0,
+        value_fn=_radio_number("quality_perentage", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="bitrate",
@@ -86,13 +122,16 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         device_class=SensorDeviceClass.DATA_RATE,
         native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_radio_number("bitrate"),
+        precision=0,
+        value_fn=_radio_number("bitrate", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="channel",
         translation_key="channel",
         icon="mdi:numeric",
-        value_fn=_radio_number("channel"),
+        enabled_default=False,
+        precision=0,
+        value_fn=_radio_number("channel", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="frequency",
@@ -101,6 +140,8 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         device_class=SensorDeviceClass.FREQUENCY,
         native_unit_of_measurement=UnitOfFrequency.MEGAHERTZ,
         state_class=SensorStateClass.MEASUREMENT,
+        enabled_default=False,
+        precision=0,
         value_fn=lambda coordinator: parse_numeric(
             coordinator.radio.get("frequency_num") or coordinator.radio.get("frequency")
         ),
@@ -110,9 +151,10 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         translation_key="uptime",
         icon="mdi:timer-outline",
         device_class=SensorDeviceClass.DURATION,
-        native_unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_sysinfo_number("uptime"),
+        precision=1,
+        value_fn=_uptime_days,
     ),
     WiTekBridgeSensorDescription(
         key="memory",
@@ -120,7 +162,9 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         icon="mdi:memory",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_sysinfo_number("memory"),
+        enabled_default=False,
+        precision=0,
+        value_fn=_sysinfo_number("memory", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="load",
@@ -128,14 +172,17 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         icon="mdi:cpu-64-bit",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_sysinfo_number("load"),
+        enabled_default=False,
+        precision=0,
+        value_fn=_sysinfo_number("load", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="active_connections",
         translation_key="active_connections",
         icon="mdi:lan-connect",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_sysinfo_number("active_connect"),
+        precision=0,
+        value_fn=_sysinfo_number("active_connect", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="upload_rate",
@@ -144,7 +191,9 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         device_class=SensorDeviceClass.DATA_RATE,
         native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_payload_number("upload"),
+        enabled_default=False,
+        precision=0,
+        value_fn=_payload_number("upload", precision=0),
     ),
     WiTekBridgeSensorDescription(
         key="download_rate",
@@ -153,7 +202,9 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         device_class=SensorDeviceClass.DATA_RATE,
         native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_payload_number("download"),
+        enabled_default=False,
+        precision=0,
+        value_fn=_payload_number("download", precision=0),
     ),
 )
 
@@ -188,6 +239,8 @@ class WiTekBridgeSensor(WiTekBridgeEntity, SensorEntity):
         device_slug = slugify(coordinator.device_info.name)
         self._attr_unique_id = f"{coordinator.device_identifier}_{description.key}"
         self._attr_suggested_object_id = f"{device_slug}_{description.key}"
+        self._attr_entity_registry_enabled_default = description.enabled_default
+        self._attr_suggested_display_precision = description.precision
 
     @property
     def native_value(self) -> Any:
