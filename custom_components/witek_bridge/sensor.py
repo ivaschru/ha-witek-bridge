@@ -76,6 +76,22 @@ def _payload_number(
     return lambda coordinator: _round_value(parse_numeric(coordinator.data.get(key)), precision)
 
 
+def _payload_bytes_to_megabits(
+    key: str,
+    *,
+    precision: int | None = None,
+) -> Callable[[WiTekBridgeCoordinator], Any]:
+    """Convert vendor bytes-per-second rates to megabits per second."""
+    return lambda coordinator: _round_value(
+        (
+            bytes_per_second * 8 / 1_000_000
+            if (bytes_per_second := parse_numeric(coordinator.data.get(key))) is not None
+            else None
+        ),
+        precision,
+    )
+
+
 def _uptime_days(coordinator: WiTekBridgeCoordinator) -> float | None:
     """Return bridge uptime converted from vendor seconds to days."""
     seconds = parse_numeric(coordinator.sysinfo.get("uptime"))
@@ -189,22 +205,22 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
         translation_key="upload_rate",
         icon="mdi:upload-network",
         device_class=SensorDeviceClass.DATA_RATE,
-        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
         enabled_default=False,
-        precision=0,
-        value_fn=_payload_number("upload", precision=0),
+        precision=2,
+        value_fn=_payload_bytes_to_megabits("upload", precision=2),
     ),
     WiTekBridgeSensorDescription(
         key="download_rate",
         translation_key="download_rate",
         icon="mdi:download-network",
         device_class=SensorDeviceClass.DATA_RATE,
-        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
         enabled_default=False,
-        precision=0,
-        value_fn=_payload_number("download", precision=0),
+        precision=2,
+        value_fn=_payload_bytes_to_megabits("download", precision=2),
     ),
 )
 
