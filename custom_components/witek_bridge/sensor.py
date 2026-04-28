@@ -22,6 +22,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import WiTekBridgeCoordinator
@@ -34,11 +35,6 @@ class WiTekBridgeSensorDescription(SensorEntityDescription):
     """Describe how one sensor reads its value from coordinator data."""
 
     value_fn: Callable[[WiTekBridgeCoordinator], Any]
-
-
-def _radio_value(key: str) -> Callable[[WiTekBridgeCoordinator], Any]:
-    """Read a raw value from the primary radio block."""
-    return lambda coordinator: coordinator.radio.get(key)
 
 
 def _radio_number(key: str) -> Callable[[WiTekBridgeCoordinator], Any]:
@@ -58,13 +54,9 @@ def _payload_number(key: str) -> Callable[[WiTekBridgeCoordinator], Any]:
 
 SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
-        key="radio_status",
-        translation_key="radio_status",
-        value_fn=_radio_value("mode"),
-    ),
-    WiTekBridgeSensorDescription(
         key="signal",
         translation_key="signal",
+        icon="mdi:wifi-strength-4",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -73,6 +65,7 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="noise",
         translation_key="noise",
+        icon="mdi:wifi-strength-alert-outline",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -81,6 +74,7 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="quality",
         translation_key="quality",
+        icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_radio_number("quality_perentage"),
@@ -88,6 +82,8 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="bitrate",
         translation_key="bitrate",
+        icon="mdi:speedometer",
+        device_class=SensorDeviceClass.DATA_RATE,
         native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_radio_number("bitrate"),
@@ -95,11 +91,13 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="channel",
         translation_key="channel",
+        icon="mdi:numeric",
         value_fn=_radio_number("channel"),
     ),
     WiTekBridgeSensorDescription(
         key="frequency",
         translation_key="frequency",
+        icon="mdi:sine-wave",
         device_class=SensorDeviceClass.FREQUENCY,
         native_unit_of_measurement=UnitOfFrequency.MEGAHERTZ,
         state_class=SensorStateClass.MEASUREMENT,
@@ -110,6 +108,7 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="uptime",
         translation_key="uptime",
+        icon="mdi:timer-outline",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -118,6 +117,7 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="memory",
         translation_key="memory",
+        icon="mdi:memory",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_sysinfo_number("memory"),
@@ -125,6 +125,7 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="load",
         translation_key="load",
+        icon="mdi:cpu-64-bit",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_sysinfo_number("load"),
@@ -132,12 +133,15 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="active_connections",
         translation_key="active_connections",
+        icon="mdi:lan-connect",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_sysinfo_number("active_connect"),
     ),
     WiTekBridgeSensorDescription(
         key="upload_rate",
         translation_key="upload_rate",
+        icon="mdi:upload-network",
+        device_class=SensorDeviceClass.DATA_RATE,
         native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_payload_number("upload"),
@@ -145,6 +149,8 @@ SENSOR_DESCRIPTIONS: tuple[WiTekBridgeSensorDescription, ...] = (
     WiTekBridgeSensorDescription(
         key="download_rate",
         translation_key="download_rate",
+        icon="mdi:download-network",
+        device_class=SensorDeviceClass.DATA_RATE,
         native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_payload_number("download"),
@@ -179,7 +185,9 @@ class WiTekBridgeSensor(WiTekBridgeEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entity_description = description
+        device_slug = slugify(coordinator.device_info.name)
         self._attr_unique_id = f"{coordinator.device_identifier}_{description.key}"
+        self._attr_suggested_object_id = f"{device_slug}_{description.key}"
 
     @property
     def native_value(self) -> Any:

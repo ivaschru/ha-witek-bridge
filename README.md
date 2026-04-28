@@ -15,7 +15,7 @@ This integration uses the local web UI API exposed by the devices. It does not u
 
 Each configured device creates these entities:
 
-- Radio status
+- Connected
 - Signal
 - Noise
 - Link quality

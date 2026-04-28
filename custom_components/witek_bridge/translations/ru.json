@@ -18,12 +18,14 @@
     "abort": {
       "already_configured": "Этот мост уже настроен"
     }
-  },
-  "entity": {
+    },
+    "entity": {
+    "binary_sensor": {
+      "connected": {
+        "name": "Подключен"
+      }
+    },
     "sensor": {
-      "radio_status": {
-        "name": "Статус радио"
-      },
       "signal": {
         "name": "Сигнал"
       },

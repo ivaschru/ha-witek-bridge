@@ -18,12 +18,14 @@
     "abort": {
       "already_configured": "This bridge is already configured"
     }
-  },
-  "entity": {
+    },
+    "entity": {
+    "binary_sensor": {
+      "connected": {
+        "name": "Connected"
+      }
+    },
     "sensor": {
-      "radio_status": {
-        "name": "Radio status"
-      },
       "signal": {
         "name": "Signal"
       },

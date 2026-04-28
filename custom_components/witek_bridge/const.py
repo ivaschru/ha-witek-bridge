@@ -12,6 +12,6 @@ DEFAULT_USERNAME = "admin"
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_TIMEOUT = 10
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 MANUFACTURER = "Wi-Tek"
