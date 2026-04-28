@@ -1,0 +1,13 @@
+{
+  "domain": "witek_bridge",
+  "name": "Wi-Tek Bridge",
+  "codeowners": ["@ivaschru"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/ivaschru/ha-witek-bridge",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/ivaschru/ha-witek-bridge/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

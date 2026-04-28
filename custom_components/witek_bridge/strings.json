@@ -1,0 +1,70 @@
+{
+  "title": "Wi-Tek Bridge",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Wi-Tek bridge",
+        "data": {
+          "host": "IP address or host",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the bridge",
+      "invalid_auth": "Invalid password",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This bridge is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "radio_status": {
+        "name": "Radio status"
+      },
+      "signal": {
+        "name": "Signal"
+      },
+      "noise": {
+        "name": "Noise"
+      },
+      "quality": {
+        "name": "Quality"
+      },
+      "bitrate": {
+        "name": "Bitrate"
+      },
+      "channel": {
+        "name": "Channel"
+      },
+      "frequency": {
+        "name": "Frequency"
+      },
+      "uptime": {
+        "name": "Uptime"
+      },
+      "memory": {
+        "name": "Memory"
+      },
+      "load": {
+        "name": "Load"
+      },
+      "active_connections": {
+        "name": "Active connections"
+      },
+      "upload_rate": {
+        "name": "Upload rate"
+      },
+      "download_rate": {
+        "name": "Download rate"
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Reboot"
+      }
+    }
+  }
+}

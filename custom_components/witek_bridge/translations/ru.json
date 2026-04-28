@@ -1,0 +1,70 @@
+{
+  "title": "Wi-Tek Bridge",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Добавить Wi-Tek мост",
+        "data": {
+          "host": "IP-адрес или хост",
+          "password": "Пароль"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не удалось подключиться к мосту",
+      "invalid_auth": "Неверный пароль",
+      "unknown": "Неожиданная ошибка"
+    },
+    "abort": {
+      "already_configured": "Этот мост уже настроен"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "radio_status": {
+        "name": "Статус радио"
+      },
+      "signal": {
+        "name": "Сигнал"
+      },
+      "noise": {
+        "name": "Шум"
+      },
+      "quality": {
+        "name": "Качество"
+      },
+      "bitrate": {
+        "name": "Скорость линка"
+      },
+      "channel": {
+        "name": "Канал"
+      },
+      "frequency": {
+        "name": "Частота"
+      },
+      "uptime": {
+        "name": "Время работы"
+      },
+      "memory": {
+        "name": "Память"
+      },
+      "load": {
+        "name": "Нагрузка"
+      },
+      "active_connections": {
+        "name": "Активные соединения"
+      },
+      "upload_rate": {
+        "name": "Исходящая скорость"
+      },
+      "download_rate": {
+        "name": "Входящая скорость"
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Перезагрузка"
+      }
+    }
+  }
+}
