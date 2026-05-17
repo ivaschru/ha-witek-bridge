@@ -9,6 +9,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
@@ -20,6 +21,8 @@ from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, MANUFACTURER
 from .parsing import WiTekBridgeDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
+
+UNREACHABLE_REPAIR_FAILURE_THRESHOLD = 3
 
 
 class WiTekBridgeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -46,6 +49,9 @@ class WiTekBridgeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=f"Wi-Tek Bridge {api.host}",
             manufacturer=MANUFACTURER,
         )
+        self._consecutive_update_failures = 0
+        self._unreachable_issue_active = False
+        self._unreachable_issue_id = f"{entry.entry_id}_bridge_unreachable"
 
     @property
     def radio(self) -> dict[str, Any]:
@@ -77,13 +83,64 @@ class WiTekBridgeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except WiTekBridgeConnectionError as err:
             # Live status is more important than pretty metadata. If the HTML
             # page changes, sensors can still work from the JSON status endpoint.
+            self.api.reset_session()
             _LOGGER.debug("Unable to fetch static bridge metadata: %s", err)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch the latest bridge status."""
         try:
-            return await self.api.async_fetch_status()
+            payload = await self.api.async_fetch_status()
         except WiTekBridgeAuthError as err:
+            self.api.reset_session()
+            self._consecutive_update_failures = 0
+            self._delete_unreachable_issue()
             raise ConfigEntryAuthFailed from err
         except WiTekBridgeConnectionError as err:
+            # A network drop often means the bridge rebooted and discarded its
+            # session cookie. Reset local auth state so the next coordinator
+            # poll performs a full login instead of retrying a stale cookie.
+            self.api.reset_session()
+            self._consecutive_update_failures += 1
+            if (
+                self._consecutive_update_failures
+                >= UNREACHABLE_REPAIR_FAILURE_THRESHOLD
+            ):
+                self._create_unreachable_issue(str(err))
             raise UpdateFailed(str(err)) from err
+
+        self._consecutive_update_failures = 0
+        self._delete_unreachable_issue()
+        return payload
+
+    def _create_unreachable_issue(self, error: str) -> None:
+        """Show a Home Assistant Repairs issue while reconnect retries continue."""
+        if self._unreachable_issue_active:
+            return
+
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            self._unreachable_issue_id,
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="bridge_unreachable",
+            translation_placeholders={
+                "host": self.api.host,
+                "scan_interval": str(DEFAULT_SCAN_INTERVAL),
+                "error": error,
+            },
+        )
+        self._unreachable_issue_active = True
+
+    def clear_unreachable_issue(self) -> None:
+        """Remove the runtime connectivity Repairs issue for this config entry."""
+        self._delete_unreachable_issue()
+
+    def _delete_unreachable_issue(self) -> None:
+        """Clear the Repairs issue after the bridge answers successfully again."""
+        if not self._unreachable_issue_active:
+            return
+
+        ir.async_delete_issue(self.hass, DOMAIN, self._unreachable_issue_id)
+        self._unreachable_issue_active = False

@@ -18,8 +18,8 @@
     "abort": {
       "already_configured": "Этот мост уже настроен"
     }
-    },
-    "entity": {
+  },
+  "entity": {
     "binary_sensor": {
       "connected": {
         "name": "Подключен"
@@ -67,6 +67,12 @@
       "reboot": {
         "name": "Перезагрузка"
       }
+    }
+  },
+  "issues": {
+    "bridge_unreachable": {
+      "title": "Wi-Tek мост недоступен",
+      "description": "Home Assistant несколько опросов подряд не может подключиться к {host}. Сущности будут unavailable, а интеграция продолжит пробовать reconnect каждые {scan_interval} секунд. Последняя ошибка: {error}"
     }
   }
 }

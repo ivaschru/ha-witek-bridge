@@ -69,12 +69,23 @@ class WiTekBridgeApi:
         """Return the bridge web UI URL shown in Home Assistant device info."""
         return self._base_url
 
+    def reset_session(self) -> None:
+        """Forget the cached vendor web UI session before the next request.
+
+        Wi-Tek devices drop their HTTP session during reboots and some network
+        outages. Keeping the old cookie after a disconnect can make the next
+        poll start from stale state, so the coordinator calls this before its
+        retry loop attempts a fresh login.
+        """
+        self._authenticated = False
+        self._cookie_header = None
+
     async def async_login(self, *, force: bool = False) -> None:
         """Authenticate against the bridge web UI and keep its session cookie."""
         if self._authenticated and not force:
             return
         if force:
-            self._cookie_header = None
+            self.reset_session()
 
         payload = {
             "username": self._username,
@@ -129,7 +140,7 @@ class WiTekBridgeApi:
         except WiTekBridgeConnectionError as err:
             _LOGGER.debug("Bridge disconnected while reboot command was in flight: %s", err)
 
-        self._authenticated = False
+        self.reset_session()
 
     async def _async_request_json(
         self,
@@ -181,7 +192,9 @@ class WiTekBridgeApi:
                     response.raise_for_status()
                     return await response.text()
         except (aiohttp.ClientError, TimeoutError) as err:
-            raise WiTekBridgeConnectionError(f"Unable to fetch {path or '/'} from {self.host}") from err
+            raise WiTekBridgeConnectionError(
+                f"Unable to fetch {path or '/'} from {self.host}"
+            ) from err
 
 
 def _json_from_text(text: str) -> dict[str, Any]:

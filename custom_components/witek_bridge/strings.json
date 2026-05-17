@@ -18,8 +18,8 @@
     "abort": {
       "already_configured": "This bridge is already configured"
     }
-    },
-    "entity": {
+  },
+  "entity": {
     "binary_sensor": {
       "connected": {
         "name": "Connected"
@@ -67,6 +67,12 @@
       "reboot": {
         "name": "Reboot"
       }
+    }
+  },
+  "issues": {
+    "bridge_unreachable": {
+      "title": "Wi-Tek bridge is unreachable",
+      "description": "Home Assistant has failed to reach {host} for several polls. Entities are unavailable while the integration keeps retrying every {scan_interval} seconds. Last error: {error}"
     }
   }
 }

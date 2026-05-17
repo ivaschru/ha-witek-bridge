@@ -10,6 +10,7 @@ This integration uses the local web UI API exposed by the devices. It does not u
 - Configure each device with its IP address and password.
 - Monitor radio and system status.
 - Reboot a bridge from Home Assistant.
+- Retry setup and reconnect automatically when a bridge is temporarily offline.
 
 ## Entities
 
@@ -60,7 +61,9 @@ Other Wi-Tek devices using the same web UI may work, but are not verified.
 - The password is stored by Home Assistant in the config entry storage, not in YAML.
 - The integration polls `POST /update/system_status`.
 - The reboot button calls `POST /system/reboot`.
-- Reboot temporarily makes the device and its entities unavailable until the bridge comes back online.
+- Reboot or a network outage temporarily makes the device and its entities unavailable until the bridge comes back online.
+- If the bridge is offline while Home Assistant starts, the config entry is marked as retrying setup instead of loading partially.
+- During normal runtime outages, the integration resets the cached web UI session, retries every polling interval, and creates a Home Assistant Repairs issue after several consecutive failures. The issue is cleared automatically after a successful poll.
 
 ## Troubleshooting
 
@@ -69,6 +72,12 @@ If setup fails:
 - Check that Home Assistant can reach the bridge IP address.
 - Open the bridge web UI from the same network and verify that the password works.
 - Make sure the bridge is reachable over plain HTTP on port `80`.
+
+If an already configured bridge becomes unavailable:
+
+- Check bridge power and wireless link first; the integration will continue reconnect attempts without manual reload.
+- Look for a Home Assistant Repairs issue named `Wi-Tek bridge is unreachable` after repeated failed polls.
+- If the web UI works but entities stay unavailable, reload the config entry once to force a fresh setup path.
 
 Enable debug logging if you need more detail:
 

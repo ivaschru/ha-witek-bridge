@@ -25,4 +25,5 @@
 
 - Keep `README.md`, `hacs.json`, and `manifest.json` in sync when changing installation requirements or supported features.
 - Keep code comments helpful and explicit around device HTTP quirks because this API is reverse-engineered from the vendor web UI.
+- Runtime connectivity failures are handled by `WiTekBridgeCoordinator`: setup-time outages should surface as Home Assistant setup retry, runtime outages should reset the cached web UI session, keep coordinator polling, and raise/clear the Repairs issue after the configured consecutive-failure threshold.
 - If new writable endpoints are added, document their blast radius and keep them out of default dashboards unless they are safe.
